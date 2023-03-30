@@ -2,16 +2,82 @@
 namespace App\AccountingDrivers;
 
 use App\Tokens;
+use App\Transactions;
 use Illuminate\Support\Facades\URL;
-use QuickBooksOnline\API\Core\Http\Serialization\XmlObjectSerializer;
 use QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2AccessToken;
 use QuickBooksOnline\API\DataService\DataService;
-use QuickBooksOnline\API\Facades\Estimate;
-use Symfony\Component\CssSelector\Parser\Token;
+use QuickBooksOnline\API\Facades\Purchase;
 
 class QuickBooksHelper
 {
     private static $merchantId = 1000;
+
+    /**
+     * Function to create transaction in quick books
+     *
+     * @param Transactions $tx Takes newly created transaction as input and pass it to expense entry
+     * @return array
+     */
+    public static function createExpenseRecord(Transactions $tx)
+    {
+        // get validated access token
+        $accessToken = self::getActiveAccessToken();
+
+        // in case no valid access token
+        if(!$accessToken["status"]){
+            return false;
+        }
+
+        // get data service object and config auth client
+        $ds = self::getDataService();
+        $at = new OAuth2AccessToken(env('QUICKBOOKS_CLIENT_ID'), env('QUICKBOOKS_CLIENT_SECRET'), $accessToken["token"]->access_token, $accessToken["token"]->refresh_token);
+        $at->setAccessToken($accessToken["token"]->access_token);
+        $at->setRealmID(env('QUICKBOOKS_REALM_ID'));
+        $ds->updateOAuth2Token($at);
+
+        // prepare expense entry and add to service object
+        $resultingObj = $ds->Add(Purchase::create([
+            "PaymentType" => "CreditCard",
+            "AccountRef" =>
+            [
+                "name" => "Visa",
+                "value" => "3"
+            ],
+            "Line" =>
+            [
+                [
+                    "DetailType" => "AccountBasedExpenseLineDetail",
+                    "Amount" => $tx->transaction_amount,
+                    "AccountBasedExpenseLineDetail" =>
+                    [
+                        "AccountRef" =>
+                        [
+                            "name" => "Meals and Entertainment",
+                            "value" => "13"
+                        ]
+                    ]
+                ]
+            ]
+        ]));
+
+        // handle response
+        $error = $ds->getLastError();
+        if ($error) {
+
+            // update transaction
+            $tx->sync_response = $error->getResponseBody();
+            $tx->save();
+
+            return ['status'=>false, 'id'=>null, 'message'=>$error->getHttpStatusCode().': '.$error->getOAuthHelperError().': '.$error->getResponseBody()];
+        }
+
+        // update transaction
+        $tx->is_synced	 = '1';
+        $tx->sync_response = $resultingObj->Id;
+        $tx->save();
+
+        return ['status'=>true, 'id'=>$resultingObj->Id];
+    }
 
     /**
      * Function to get auth url
@@ -52,7 +118,7 @@ class QuickBooksHelper
     }
 
     /**
-     * Helper function to retrive data service object with settings saved in it
+     * Helper function to retrieve data service object with settings saved in it
      * @return DataService
      * @throws \QuickBooksOnline\API\Exception\SdkException
      */
@@ -155,7 +221,7 @@ class QuickBooksHelper
             $accessToken = Tokens::getTokenInfoByMerchantID(self::$merchantId);
 
             if(self::isValidAccessToken()) {
-                return ["status"=>true, "value"=> $accessToken->access_token ];
+                return ["status"=>true, "token"=> $accessToken ];
             }
             $accessTokenObj = $loginHelper->refreshAccessTokenWithRefreshToken($accessToken->refresh_token);
 
@@ -165,11 +231,11 @@ class QuickBooksHelper
             $accessToken->refresh_token_expiry = $accessTokenObj->getRefreshTokenExpiresAt();
             $accessToken->save();
 
-            return ["status"=>true, "value"=> $accessToken->access_token];
+            return ["status"=>true, "token"=> $accessToken];
         }
         catch(\Exception $ex)
         {
-            return ["status"=>false, "value"=>$ex->getMessage()];
+            return ["status"=>false, "token"=>$ex->getMessage()];
         }
     }
 }
