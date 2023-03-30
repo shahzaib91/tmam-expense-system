@@ -15,9 +15,9 @@ class CreateTokensTable extends Migration
     {
         Schema::create('tokens', function (Blueprint $table) {
             $table->id();
-            $table->string('access_token');
+            $table->longText('access_token');
             $table->string('access_token_expiry');
-            $table->string('refresh_token');
+            $table->longText('refresh_token');
             $table->string('refresh_token_expiry');
             $table->string('platform')->default('quickbooks');
             $table->integer('merchant_code');
