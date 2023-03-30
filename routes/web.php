@@ -1,5 +1,6 @@
 <?php
 
+use App\Transactions;
 use Illuminate\Support\Facades\Route;
 
 /*
