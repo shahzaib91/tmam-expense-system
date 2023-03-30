@@ -1,5 +1,6 @@
 <?php
 
+use App\AccountingDrivers\Helper\QuickBooksAuthHelper;
 use App\Transactions;
 use Illuminate\Support\Facades\Route;
 
@@ -13,7 +14,7 @@ use Illuminate\Support\Facades\Route;
 | contains the "web" middleware group. Now create something great!
 |
 */
-
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', 'FrontendController@index');
+Route::get('/list/{merchantID}', 'FrontendController@list');
+Route::get('/auth', 'FrontendController@quickBooksAuth');
+Route::get('/quickbooks-response', 'FrontendController@handleQuickBooksAuth');
