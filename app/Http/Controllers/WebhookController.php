@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\AccountingDrivers\QuickBook;
 use App\Http\Requests\ExpenseRequest;
 use App\Transactions;
 use Carbon\Carbon;
@@ -45,6 +46,7 @@ class WebhookController extends Controller
         $tx->save();
 
         // accounting sync action here
+        QuickBook::createExpense($tx);
 
         // return api response
         return $this->respondJson(200, 'success', true, $tx);
