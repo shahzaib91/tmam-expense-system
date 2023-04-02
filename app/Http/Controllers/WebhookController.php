@@ -25,7 +25,7 @@ class WebhookController extends Controller
 
         // check if not matched return error
         if($receivedSignature != $makeSignature) {
-            // return $this->respondJson(400, 'signature_error', false);
+            return $this->respondJson(400, 'signature_error', false);
         }
 
         // if arrived here start inserting data
