@@ -79,14 +79,14 @@
                             <tr>
                                 <td>{{ $t->transaction_id }}</td>
                                 <td>{{ $t->transaction_type == 'd' ? 'Debit' : 'Credit' }}</td>
-                                <td>{{ $t->transaction_type == '0' ? 'Declined' : 'Accepted' }}</td>
+                                <td>{{ (int) $t->transaction_status == 0 ? 'Declined' : 'Authorized' }}</td>
                                 <td>{{ $t->merchant_name }}</td>
                                 <td>{{ $t->merchant_country }}</td>
                                 <td>{{ $t->merchant_currency.' '.number_format($t->amount, 2) }}</td>
                                 <td>{{ $t->transaction_currency.' '.number_format($t->transaction_amount, 2) }}</td>
                                 <td>{{ $t->transaction_datetime }}</td>
-                                <td>{{ $t->transaction_type == '0' ? 'No' : 'Yes' }}</td>
-                                <td>{{ $t->sync_response }}</td>
+                                <td>{{ (int) $t->is_synced == 0 ? 'No' : 'Yes' }}</td>
+                                <td>{{ $t->sync_response == '' ? '-' : $t->sync_response }}</td>
                             </tr>
 
                             @endforeach
